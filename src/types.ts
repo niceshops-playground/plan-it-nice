@@ -17,6 +17,10 @@ export interface Deck {
 
 export type DeckId = 'fibonacci' | 'mod-fibonacci' | 'tshirt' | 'powers-of-2'
 
+/** Who is allowed to reveal cards, start a new round, and change the deck.
+ *  `anyone` = any participant; `host` = only the room creator. */
+export type RevealPolicy = 'anyone' | 'host'
+
 /** A participant as seen by everyone in the room. */
 export interface Participant {
   id: string
@@ -32,11 +36,24 @@ export interface Participant {
 /** Authoritative room state, owned by the host and broadcast to all peers. */
 export interface RoomState {
   roomId: string
+  /** Peer id of the host (room creator), so clients can badge the seat and
+   *  enforce the reveal policy in the UI. */
+  hostId: string
   topic: string
   deckId: DeckId
   revealed: boolean
   round: number
+  revealPolicy: RevealPolicy
   participants: Participant[]
+}
+
+/** A transient emoji thrown from one participant at another. Not part of the
+ *  persisted room state — it animates and disappears. */
+export interface Reaction {
+  id: string
+  from: string
+  to: string
+  emoji: string
 }
 
 /* ------------------------------------------------------------------ *
@@ -54,8 +71,14 @@ export type ClientMessage =
   | { type: 'setTopic'; topic: string }
   | { type: 'setObserver'; isObserver: boolean }
   | { type: 'rename'; name: string }
+  | { type: 'setRevealPolicy'; policy: RevealPolicy }
+  // A client asks the host to broadcast an emoji aimed at `to`.
+  | { type: 'throw'; to: string; emoji: string }
 
-export type HostMessage = { type: 'state'; state: RoomState }
+export type HostMessage =
+  | { type: 'state'; state: RoomState }
+  // The host fans a thrown emoji out to everyone (including the sender).
+  | { type: 'reaction'; reaction: Reaction }
 
 export type PeerMessage = ClientMessage | HostMessage
 

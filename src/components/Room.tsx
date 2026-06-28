@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react'
 import { usePeerRoom, type RoomConfig } from '../peer/usePeerRoom'
 import { DECK_LIST, getDeck } from '../decks'
 import { computeStats } from '../stats'
-import type { DeckId } from '../types'
+import type { DeckId, RevealPolicy } from '../types'
 import CardGrid from './CardGrid'
-import Participants from './Participants'
+import Table from './Table'
 import Results from './Results'
 import Logo from './Logo'
 
@@ -68,6 +68,8 @@ export default function Room({ config, onLeave }: Props) {
   const votedCount = voters.filter((p) => p.hasVoted).length
   const allVoted = voters.length > 0 && votedCount === voters.length
   const amObserver = self?.isObserver ?? config.isObserver
+  // Who may reveal / reset / change the deck.
+  const canFacilitate = room.isHost || state.revealPolicy === 'anyone'
 
   return (
     <div className="room">
@@ -90,6 +92,12 @@ export default function Room({ config, onLeave }: Props) {
         </div>
       </header>
 
+      {status === 'reconnecting' && (
+        <div className="reconnect-banner" role="status">
+          Connection dropped — reconnecting…
+        </div>
+      )}
+
       <main className="room-main">
         <section className="topic-bar">
           <input
@@ -107,6 +115,7 @@ export default function Room({ config, onLeave }: Props) {
             <select
               value={state.deckId}
               onChange={(e) => room.setDeck(e.target.value as DeckId)}
+              disabled={!canFacilitate}
             >
               {DECK_LIST.map((d) => (
                 <option key={d.id} value={d.id}>
@@ -115,6 +124,20 @@ export default function Room({ config, onLeave }: Props) {
               ))}
             </select>
           </label>
+
+          {room.isHost && (
+            <label className="deck-picker">
+              <span className="muted">Reveal</span>
+              <select
+                value={state.revealPolicy}
+                onChange={(e) => room.setRevealPolicy(e.target.value as RevealPolicy)}
+                aria-label="Who can reveal cards"
+              >
+                <option value="anyone">Anyone</option>
+                <option value="host">Host only</option>
+              </select>
+            </label>
+          )}
 
           <div className="vote-progress" aria-live="polite">
             {state.revealed ? (
@@ -131,25 +154,47 @@ export default function Room({ config, onLeave }: Props) {
               <button
                 className="btn btn-primary"
                 onClick={room.reveal}
-                disabled={votedCount === 0}
-                title={votedCount === 0 ? 'No votes yet' : 'Reveal all votes'}
+                disabled={votedCount === 0 || !canFacilitate}
+                title={
+                  !canFacilitate
+                    ? 'Only the host can reveal in this room'
+                    : votedCount === 0
+                      ? 'No votes yet'
+                      : 'Reveal all votes'
+                }
               >
                 Reveal {allVoted ? '' : `(${votedCount})`}
               </button>
             ) : (
-              <button className="btn btn-primary" onClick={room.reset}>
+              <button
+                className="btn btn-primary"
+                onClick={room.reset}
+                disabled={!canFacilitate}
+                title={!canFacilitate ? 'Only the host can start a new round' : 'Start a new round'}
+              >
                 New round
               </button>
             )}
           </div>
         </section>
 
+        <Table
+          participants={state.participants}
+          selfId={selfId}
+          hostId={state.hostId}
+          revealed={state.revealed}
+          deckId={state.deckId}
+          reactions={room.reactions}
+          onThrow={room.throwEmoji}
+        />
+
         {state.revealed && stats ? (
           <Results stats={stats} />
         ) : amObserver ? (
           <section className="observer-note card-panel">
             <p className="muted">
-              You’re observing. Reveal the votes when the team is ready, then start a new round.
+              You’re observing. {canFacilitate ? 'Reveal the votes' : 'The host reveals the votes'}{' '}
+              when the team is ready.
             </p>
           </section>
         ) : (
@@ -160,13 +205,6 @@ export default function Room({ config, onLeave }: Props) {
             onPick={(value) => (selfVote === value ? room.retract() : room.vote(value))}
           />
         )}
-
-        <Participants
-          participants={state.participants}
-          selfId={selfId}
-          revealed={state.revealed}
-          deckId={state.deckId}
-        />
       </main>
 
       <footer className="room-footer">
@@ -178,7 +216,6 @@ export default function Room({ config, onLeave }: Props) {
           />
           <span>Observer mode</span>
         </label>
-        {status === 'reconnecting' && <span className="muted">· reconnecting…</span>}
         {room.isHost && <span className="host-badge">host</span>}
       </footer>
     </div>

@@ -566,6 +566,265 @@ select:focus {
   }
 }
 
+/* --------------------------- reconnect banner ------------------------- */
+
+.reconnect-banner {
+  background: linear-gradient(90deg, var(--orange-dim), var(--orange));
+  color: #fff;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.45rem;
+}
+
+/* ------------------------------ the table ----------------------------- */
+
+.table-area {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+.felt {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(236, 102, 8, 0.16), transparent 60%),
+    linear-gradient(180deg, #20242a, #191b1f);
+  box-shadow:
+    inset 0 0 60px rgba(0, 0, 0, 0.45),
+    var(--shadow);
+  padding: 1.4rem 1rem;
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.felt-empty {
+  margin: 0;
+}
+.seats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.1rem 1.4rem;
+}
+.seat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  width: 76px;
+}
+
+/* flip card */
+.seat-card-wrap {
+  position: relative;
+  width: 56px;
+  height: 84px;
+  perspective: 600px;
+}
+.flip-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.flip-card.is-flipped {
+  transform: rotateY(180deg);
+}
+.flip-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--line);
+}
+.flip-back {
+  background: linear-gradient(160deg, var(--ink-3), var(--ink-2));
+  border-color: var(--orange-dim);
+}
+.flip-front {
+  transform: rotateY(180deg);
+  background: linear-gradient(160deg, var(--orange), var(--orange-dim));
+  border-color: var(--orange);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(236, 102, 8, 0.4);
+}
+.flip-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+.seat-empty {
+  width: 100%;
+  height: 100%;
+  border: 2px dashed var(--line);
+  border-radius: 10px;
+  animation: breathe 2s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}
+.seat.is-self .flip-face,
+.seat.is-self .seat-empty {
+  outline: 2px solid var(--orange);
+  outline-offset: 1px;
+}
+
+.seat-name {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  max-width: 100%;
+}
+.seat-name-text {
+  font-weight: 600;
+  font-size: 0.85rem;
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* react button + palette */
+.react {
+  position: relative;
+}
+.react-btn {
+  border: 1px solid var(--line);
+  background: var(--ink-3);
+  color: var(--text);
+  border-radius: 999px;
+  width: 28px;
+  height: 28px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+.react-btn:hover {
+  border-color: var(--orange);
+}
+.react-palette {
+  position: absolute;
+  bottom: 120%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.15rem;
+  background: var(--ink-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.35rem;
+  box-shadow: var(--shadow);
+  z-index: 20;
+}
+.react-emoji {
+  border: none;
+  background: transparent;
+  font-size: 1.35rem;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 0.2rem;
+  line-height: 1;
+}
+.react-emoji:hover {
+  background: var(--ink-3);
+  transform: scale(1.2);
+}
+
+/* floating thrown emojis */
+.floaters {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+.floater {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  font-size: 1.7rem;
+  animation: floatUp 2.2s ease-out forwards;
+}
+.floater:nth-child(2n) {
+  left: 30%;
+}
+.floater:nth-child(3n) {
+  left: 68%;
+}
+@keyframes floatUp {
+  0% {
+    transform: translate(-50%, 0) scale(0.5) rotate(-8deg);
+    opacity: 0;
+  }
+  18% {
+    transform: translate(-50%, -8px) scale(1.3) rotate(6deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -70px) scale(0.9) rotate(-6deg);
+    opacity: 0;
+  }
+}
+
+/* observers strip */
+.observers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+.observer-chip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--ink-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.85rem;
+}
+.observer-chip.is-self {
+  border-color: var(--orange-dim);
+}
+.observer-chip .react-btn {
+  width: 22px;
+  height: 22px;
+  font-size: 0.8rem;
+}
+.observer-eye {
+  opacity: 0.8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flip-card,
+  .floater,
+  .seat-empty {
+    transition: none;
+    animation: none;
+  }
+}
+
 @media (max-width: 520px) {
   .stat-row {
     grid-template-columns: repeat(2, 1fr);
@@ -573,5 +832,18 @@ select:focus {
   .controls .row {
     margin-left: 0;
     width: 100%;
+  }
+  .seats {
+    gap: 0.9rem 1rem;
+  }
+  .seat {
+    width: 64px;
+  }
+  .seat-card-wrap {
+    width: 48px;
+    height: 72px;
+  }
+  .flip-value {
+    font-size: 1.25rem;
   }
 }

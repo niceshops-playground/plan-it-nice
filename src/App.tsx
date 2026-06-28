@@ -10,6 +10,10 @@ import { normalizeRoomCode } from './room-code'
  *   #/room/<CODE>       → a room
  * A `host` flag is carried in component state (not the URL) so a shared link
  * always joins as a participant, never accidentally as a second host.
+ *
+ * The active session is mirrored to sessionStorage so a reload (or a discarded
+ * tab) drops you straight back into the same room with the same role, while
+ * name/observer preferences live in localStorage so they persist across visits.
  */
 
 interface Session {
@@ -25,20 +29,34 @@ function readRoomFromHash(): string | null {
 }
 
 const NAME_KEY = 'pin:name'
+const OBSERVER_KEY = 'pin:observer'
+const SESSION_KEY = 'pin:session'
+
+function loadSession(): Session | null {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY)
+    if (!raw) return null
+    const s = JSON.parse(raw) as Session
+    // Only restore if the URL still points at the same room.
+    const code = readRoomFromHash()
+    return code && code === s.roomId ? s : null
+  } catch {
+    return null
+  }
+}
 
 export default function App() {
   const [roomCode, setRoomCode] = useState<string | null>(readRoomFromHash)
-  const [session, setSession] = useState<Session | null>(null)
+  const [session, setSession] = useState<Session | null>(loadSession)
   const [pendingHost, setPendingHost] = useState(false)
 
   useEffect(() => {
     const onHash = () => {
       const code = readRoomFromHash()
       setRoomCode(code)
-      if (!code) {
-        setSession(null)
-        setPendingHost(false)
-      }
+      // Leaving the room, or navigating to a different one, ends the session.
+      setSession((prev) => (prev && prev.roomId === code ? prev : null))
+      if (!code) setPendingHost(false)
     }
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
@@ -58,10 +76,14 @@ export default function App() {
   const handleEnter = (name: string, isObserver: boolean) => {
     if (!roomCode) return
     localStorage.setItem(NAME_KEY, name)
-    setSession({ roomId: roomCode, isHost: pendingHost, name, isObserver })
+    localStorage.setItem(OBSERVER_KEY, String(isObserver))
+    const next: Session = { roomId: roomCode, isHost: pendingHost, name, isObserver }
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(next))
+    setSession(next)
   }
 
   const handleLeave = () => {
+    sessionStorage.removeItem(SESSION_KEY)
     setSession(null)
     setPendingHost(false)
     window.location.hash = '#/'
@@ -77,6 +99,7 @@ export default function App() {
         roomCode={roomCode}
         isHost={pendingHost}
         defaultName={localStorage.getItem(NAME_KEY) ?? ''}
+        defaultObserver={localStorage.getItem(OBSERVER_KEY) === 'true'}
         onEnter={handleEnter}
         onCancel={handleLeave}
       />

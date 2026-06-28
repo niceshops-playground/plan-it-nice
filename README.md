@@ -14,8 +14,16 @@ niceshops orange.
 - 🙈 **Hidden votes** — nobody sees anyone else's card until you reveal.
 - 📊 **Reveal stats** — average, median, spread (low–high), vote count, a
   distribution histogram, and a consensus celebration when everyone agrees.
+- 🃏 **Poker table** — everyone gets a seat; cards sit face-down (with names)
+  until the reveal, then flip face-up together.
+- 🎉 **Throw emojis** — tap a player to fling 👍🎉🔥❤️😂🤔🐢🚀 at their seat.
 - 🔁 **Rounds** — reset and re-estimate as many times as you like.
 - 👀 **Observers** — facilitators and stakeholders can watch without voting.
+- 🔒 **Reveal policy** — the host can let anyone flip the cards (default) or
+  lock reveal / new round / deck changes to the host only.
+- 💾 **Survives a reload** — your name/observer choice is remembered, and a
+  reload drops you back into the same room; a host that reloads reclaims the
+  same room code and keeps the topic, deck, round, and settings.
 - 🔗 **Just a link** — one peer hosts the room; everyone else joins via the
   shared code/link.
 - 📱 **Installable PWA** — works offline as an app shell and installs to your
@@ -38,8 +46,11 @@ Signalling uses the **public PeerJS broker** and **public Google/Twilio STUN**
 servers. There is intentionally **no TURN server** configured (see
 [Limitations](#limitations)).
 
-> Because the room lives in the host's browser tab, the room disappears when the
-> host closes their tab. For a long session, the host should keep the tab open.
+> The room lives in the host's browser tab. The host can safely **reload** — it
+> reclaims the same room code (`pin<CODE>`) and clients reconnect automatically,
+> with the topic/deck/round/settings restored from sessionStorage (in-flight
+> votes for the current round are dropped). But if the host fully **closes** the
+> tab, the room ends. For a long session, keep the host tab open.
 
 ## Getting started
 
@@ -84,8 +95,9 @@ app from a different path (e.g. a custom domain at the root), build with
   symmetric NATs or strict corporate firewalls. To support those, add a TURN
   server to the `iceServers` list in
   [`src/peer/usePeerRoom.ts`](src/peer/usePeerRoom.ts).
-- **Host-dependent room.** State lives in the host's tab; if the host leaves,
-  the room ends.
+- **Host-dependent room.** State lives in the host's tab. A host *reload* is
+  recovered (same room code reclaimed, settings restored, clients reconnect),
+  but if the host *closes* the tab the room ends.
 - **Public broker.** Signalling uses the shared public PeerJS broker, which is
   best-effort and unauthenticated. Room codes are random and namespaced, but
   this is not a security boundary — don't put secrets in topic names.
