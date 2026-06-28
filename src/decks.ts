@@ -56,6 +56,12 @@ export function getDeck(id: DeckId): Deck {
   return DECKS[id] ?? DECKS.fibonacci
 }
 
+// Per-deck value → card index, built once, so card lookups (hot in stats and
+// the participant list) are O(1) instead of scanning the deck each time.
+const CARD_INDEX: Record<DeckId, Map<string, Card>> = Object.fromEntries(
+  DECK_LIST.map((deck) => [deck.id, new Map(deck.cards.map((c) => [c.value, c]))]),
+) as Record<DeckId, Map<string, Card>>
+
 export function getCard(deckId: DeckId, value: string): Card | undefined {
-  return getDeck(deckId).cards.find((c) => c.value === value)
+  return CARD_INDEX[deckId]?.get(value)
 }

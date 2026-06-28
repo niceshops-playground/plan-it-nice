@@ -51,37 +51,30 @@ export function computeStats(deckId: DeckId, participants: Participant[]): VoteS
       return a.label.localeCompare(b.label)
     })
 
+  // Consensus = more than one voter and everyone played the same card.
+  const consensus = votes.length > 1 && new Set(votes).size === 1
+
   const numbers = votes
     .map((v) => getCard(deckId, v)?.numeric)
     .filter((n): n is number => n != null)
     .sort((a, b) => a - b)
 
   if (numbers.length === 0) {
-    return {
-      count: votes.length,
-      average: null,
-      median: null,
-      low: null,
-      high: null,
-      consensus: votes.length > 1 && new Set(votes).size === 1,
-      histogram,
-    }
+    return { count: votes.length, average: null, median: null, low: null, high: null, consensus, histogram }
   }
 
   const sum = numbers.reduce((a, b) => a + b, 0)
-  const lowCard = getCard(deckId, votes.find((v) => getCard(deckId, v)?.numeric === numbers[0])!)
-  const highCard = getCard(
-    deckId,
-    votes.find((v) => getCard(deckId, v)?.numeric === numbers[numbers.length - 1])!,
-  )
+  // The min/max numeric votes are always present in the histogram, so reuse its
+  // labels rather than searching the deck again.
+  const labelFor = (n: number) => histogram.find((b) => b.numeric === n)?.label ?? String(n)
 
   return {
     count: votes.length,
     average: sum / numbers.length,
     median: median(numbers),
-    low: lowCard?.label ?? String(numbers[0]),
-    high: highCard?.label ?? String(numbers[numbers.length - 1]),
-    consensus: new Set(numbers).size === 1 && new Set(votes).size === 1,
+    low: labelFor(numbers[0]),
+    high: labelFor(numbers[numbers.length - 1]),
+    consensus,
     histogram,
   }
 }

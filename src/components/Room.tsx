@@ -145,7 +145,7 @@ export default function Room({ config, onLeave }: Props) {
         </section>
 
         {state.revealed && stats ? (
-          <Results deck={deck} stats={stats} />
+          <Results stats={stats} />
         ) : amObserver ? (
           <section className="observer-note card-panel">
             <p className="muted">

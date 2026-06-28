@@ -1,8 +1,6 @@
 import { fmt, type VoteStats } from '../stats'
-import type { Deck } from '../types'
 
 interface Props {
-  deck: Deck
   stats: VoteStats
 }
 

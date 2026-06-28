@@ -3,7 +3,6 @@ import { makeRoomCode, normalizeRoomCode } from '../room-code'
 import Logo from './Logo'
 
 interface Props {
-  defaultName: string
   onCreate: (code: string) => void
   onJoin: (code: string) => void
 }

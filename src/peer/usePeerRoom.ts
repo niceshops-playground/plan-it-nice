@@ -67,6 +67,17 @@ interface Member {
   conn: DataConnection | null
 }
 
+const makeMember = (
+  id: string,
+  name: string,
+  isObserver: boolean,
+  conn: DataConnection | null,
+): Member => ({ id, name: name.trim() || 'Guest', isObserver, vote: null, conn })
+
+const clearVotes = (members: Map<string, Member>) => {
+  for (const m of members.values()) m.vote = null
+}
+
 export function usePeerRoom(config: RoomConfig): RoomApi {
   const { roomId, isHost } = config
 
@@ -86,7 +97,9 @@ export function usePeerRoom(config: RoomConfig): RoomApi {
   const membersRef = useRef<Map<string, Member>>(new Map())
   const metaRef = useRef({ topic: '', deckId: 'fibonacci' as DeckId, revealed: false, round: 1 })
 
-  // Reset the local vote highlight whenever a new round starts.
+  // Reset the local vote highlight whenever a new round starts. Guarded so we
+  // only setState on an actual round change (react-hooks forbids an
+  // unconditional setState in an effect).
   const lastRoundRef = useRef(1)
   useEffect(() => {
     if (state && state.round !== lastRoundRef.current) {
@@ -139,13 +152,7 @@ export function usePeerRoom(config: RoomConfig): RoomApi {
 
       switch (msg.type) {
         case 'hello': {
-          members.set(fromId, {
-            id: fromId,
-            name: msg.name?.trim() || 'Guest',
-            isObserver: !!msg.isObserver,
-            vote: null,
-            conn: mem?.conn ?? null,
-          })
+          members.set(fromId, makeMember(fromId, msg.name, !!msg.isObserver, mem?.conn ?? null))
           break
         }
         case 'vote': {
@@ -163,14 +170,14 @@ export function usePeerRoom(config: RoomConfig): RoomApi {
         case 'reset': {
           meta.revealed = false
           meta.round += 1
-          for (const m of members.values()) m.vote = null
+          clearVotes(members)
           break
         }
         case 'setDeck': {
           meta.deckId = msg.deckId
           // Switching decks invalidates in-flight votes.
           meta.revealed = false
-          for (const m of members.values()) m.vote = null
+          clearVotes(members)
           break
         }
         case 'setTopic': {
@@ -211,14 +218,7 @@ export function usePeerRoom(config: RoomConfig): RoomApi {
       conn.on('open', () => {
         const existing = membersRef.current.get(conn.peer)
         if (existing) existing.conn = conn
-        else
-          membersRef.current.set(conn.peer, {
-            id: conn.peer,
-            name: 'Guest',
-            isObserver: false,
-            vote: null,
-            conn,
-          })
+        else membersRef.current.set(conn.peer, makeMember(conn.peer, 'Guest', false, conn))
         commit()
       })
       const drop = () => {
@@ -234,13 +234,7 @@ export function usePeerRoom(config: RoomConfig): RoomApi {
       setSelfId(id)
       if (isHost) {
         // Seed the host as the first member.
-        membersRef.current.set(id, {
-          id,
-          name: me.name,
-          isObserver: me.isObserver,
-          vote: null,
-          conn: null,
-        })
+        membersRef.current.set(id, makeMember(id, me.name, me.isObserver, null))
         metaRef.current.deckId = 'fibonacci'
         setStatus('connected')
         commit()

@@ -11,10 +11,10 @@ export function makeRoomCode(length = 6): string {
 }
 
 /** Normalise user-typed codes: uppercase, strip anything not in the alphabet. */
+// The alphabet is alphanumeric, so it's safe to drop straight into a character
+// class without escaping.
+const NOT_IN_ALPHABET = new RegExp(`[^${ALPHABET}]`, 'g')
+
 export function normalizeRoomCode(input: string): string {
-  return input
-    .toUpperCase()
-    .split('')
-    .filter((ch) => ALPHABET.includes(ch))
-    .join('')
+  return input.toUpperCase().replace(NOT_IN_ALPHABET, '')
 }

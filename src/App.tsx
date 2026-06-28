@@ -83,11 +83,5 @@ export default function App() {
     )
   }
 
-  return (
-    <Home
-      defaultName={localStorage.getItem(NAME_KEY) ?? ''}
-      onCreate={handleCreate}
-      onJoin={handleJoinExisting}
-    />
-  )
+  return <Home onCreate={handleCreate} onJoin={handleJoinExisting} />
 }

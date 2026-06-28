@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { getCard } from '../decks'
 import type { DeckId, Participant } from '../types'
 
@@ -10,10 +11,14 @@ interface Props {
 
 export default function Participants({ participants, selfId, revealed, deckId }: Props) {
   // Voters first, then observers; stable within each group by name.
-  const sorted = [...participants].sort((a, b) => {
-    if (a.isObserver !== b.isObserver) return a.isObserver ? 1 : -1
-    return a.name.localeCompare(b.name)
-  })
+  const sorted = useMemo(
+    () =>
+      [...participants].sort((a, b) => {
+        if (a.isObserver !== b.isObserver) return a.isObserver ? 1 : -1
+        return a.name.localeCompare(b.name)
+      }),
+    [participants],
+  )
 
   return (
     <section className="participants" aria-label="Participants">
