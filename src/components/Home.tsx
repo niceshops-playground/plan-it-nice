@@ -1,5 +1,9 @@
 import { useState } from 'react'
-import { makeRoomCode, normalizeRoomCode } from '../room-code'
+import {
+  MIN_ROOM_CODE_LENGTH,
+  makeRoomCode,
+  normalizeRoomCode,
+} from '../room-code'
 import Logo from './Logo'
 
 interface Props {
@@ -8,8 +12,12 @@ interface Props {
 }
 
 export default function Home({ onCreate, onJoin }: Props) {
+  const [roomName, setRoomName] = useState('')
   const [joinCode, setJoinCode] = useState('')
   const code = normalizeRoomCode(joinCode)
+  const nameSlug = normalizeRoomCode(roomName)
+  // A named room reuses the same code every time, so a team link is permanent.
+  const createCode = () => onCreate(nameSlug || makeRoomCode())
 
   return (
     <main className="screen home">
@@ -26,9 +34,31 @@ export default function Home({ onCreate, onJoin }: Props) {
         <p className="muted">
           You become the host. Share the room link and your team estimates together in real time.
         </p>
-        <button className="btn btn-primary btn-lg" onClick={() => onCreate(makeRoomCode())}>
-          Create room
-        </button>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            createCode()
+          }}
+        >
+          <input
+            className="text-input"
+            value={roomName}
+            onChange={(e) => setRoomName(e.target.value)}
+            placeholder="Room name — e.g. your team (optional)"
+            autoCorrect="off"
+            spellCheck={false}
+            aria-label="Room name"
+            maxLength={40}
+          />
+          {nameSlug && (
+            <p className="muted room-name-hint">
+              Room code: <strong>{nameSlug}</strong> — same link every time.
+            </p>
+          )}
+          <button className="btn btn-primary btn-lg" type="submit">
+            {nameSlug ? 'Create named room' : 'Create room'}
+          </button>
+        </form>
       </section>
 
       <div className="or-divider">
@@ -40,21 +70,25 @@ export default function Home({ onCreate, onJoin }: Props) {
         <form
           onSubmit={(e) => {
             e.preventDefault()
-            if (code.length >= 4) onJoin(code)
+            if (code.length >= MIN_ROOM_CODE_LENGTH) onJoin(code)
           }}
         >
           <input
             className="text-input code-input"
             value={joinCode}
             onChange={(e) => setJoinCode(e.target.value)}
-            placeholder="ABC123"
-            autoCapitalize="characters"
+            placeholder="e.g. frontend-guild"
+            autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
             aria-label="Room code"
             maxLength={12}
           />
-          <button className="btn btn-secondary btn-lg" type="submit" disabled={code.length < 4}>
+          <button
+            className="btn btn-secondary btn-lg"
+            type="submit"
+            disabled={code.length < MIN_ROOM_CODE_LENGTH}
+          >
             Join room
           </button>
         </form>

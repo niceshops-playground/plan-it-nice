@@ -317,6 +317,16 @@ select:focus {
 .vote-progress {
   font-weight: 600;
   color: var(--orange-bright);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.vote-warning {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text);
+  opacity: 0.75;
 }
 .controls .row {
   margin-left: auto;
@@ -613,19 +623,37 @@ select:focus {
   gap: 1.1rem 1.4rem;
 }
 .seat {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.4rem;
-  width: 76px;
+  width: 104px;
 }
 
-/* flip card */
+/* flip card — also the click target for reacting / throwing at this seat */
 .seat-card-wrap {
   position: relative;
   width: 56px;
   height: 84px;
   perspective: 600px;
+}
+.seat-trigger {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.seat-trigger:hover .flip-face,
+.seat-trigger:hover .seat-empty,
+.seat-trigger:focus-visible .flip-face,
+.seat-trigger:focus-visible .seat-empty {
+  outline: 2px solid var(--orange-dim);
+  outline-offset: 2px;
 }
 .flip-card {
   position: relative;
@@ -688,16 +716,18 @@ select:focus {
 .seat-name {
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
   gap: 0.25rem;
   max-width: 100%;
 }
 .seat-name-text {
   font-weight: 600;
   font-size: 0.85rem;
-  max-width: 70px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  max-width: 100%;
+  text-align: center;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 /* react button + palette */
@@ -721,12 +751,15 @@ select:focus {
 }
 .react-palette {
   position: absolute;
-  bottom: 120%;
+  bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.15rem;
+  display: none;
+  grid-template-columns: repeat(6, 2rem);
+  gap: 0.1rem;
+  max-height: 210px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--ink-2);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -734,13 +767,34 @@ select:focus {
   box-shadow: var(--shadow);
   z-index: 20;
 }
+/* Reveal on hover/focus (desktop) or when tapped open (touch). A tiny bridge
+   below keeps the palette reachable when the pointer moves up into it. */
+.react-palette::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 0.5rem;
+}
+.react-palette.is-open,
+.seat:hover .react-palette,
+.seat:focus-within .react-palette,
+.observer-chip:hover .react-palette,
+.observer-chip:focus-within .react-palette,
+.react:hover .react-palette,
+.react:focus-within .react-palette {
+  display: grid;
+}
 .react-emoji {
   border: none;
   background: transparent;
-  font-size: 1.35rem;
+  width: 2rem;
+  height: 2rem;
+  font-size: 1.25rem;
   cursor: pointer;
   border-radius: 8px;
-  padding: 0.2rem;
+  padding: 0;
   line-height: 1;
 }
 .react-emoji:hover {
@@ -783,6 +837,83 @@ select:focus {
   }
 }
 
+/* thrown objects fly across the table (positioned by ThrowLayer via WAAPI) */
+.throw-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+}
+.projectile {
+  position: fixed;
+  left: 0;
+  top: 0;
+  font-size: 2.1rem;
+  line-height: 1;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.4));
+}
+
+.room-name-hint {
+  margin: 0.15rem 0 0.6rem;
+  font-size: 0.85rem;
+}
+
+/* session log */
+.session-log {
+  margin-top: 1rem;
+}
+.session-log-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.session-log-toggle {
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+.session-log-list {
+  list-style: none;
+  margin: 0.8rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.session-log-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.7rem;
+  background: var(--ink-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.session-log-topic {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.session-log-result {
+  display: flex;
+  align-items: baseline;
+  gap: 0.15rem;
+  white-space: nowrap;
+}
+.session-log-result strong {
+  color: var(--orange-bright);
+  font-size: 1.05rem;
+}
+.agree-badge {
+  margin-right: 0.15rem;
+}
+
 /* observers strip */
 .observers {
   list-style: none;
@@ -819,6 +950,7 @@ select:focus {
 @media (prefers-reduced-motion: reduce) {
   .flip-card,
   .floater,
+  .projectile,
   .seat-empty {
     transition: none;
     animation: none;
@@ -837,7 +969,7 @@ select:focus {
     gap: 0.9rem 1rem;
   }
   .seat {
-    width: 64px;
+    width: 84px;
   }
   .seat-card-wrap {
     width: 48px;

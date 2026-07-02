@@ -10,7 +10,12 @@ import type {
   Reaction,
   RevealPolicy,
   RoomState,
+  RoundResult,
 } from '../types'
+import { mayFacilitate } from '../facilitation'
+import { parseRoomSettings } from '../room-url'
+import { getDeck } from '../decks'
+import { computeStats, fmt } from '../stats'
 
 /**
  * Topology: a star. The peer that creates a room is the *host* and owns the
@@ -89,6 +94,38 @@ interface RoomMeta {
   revealed: boolean
   round: number
   revealPolicy: RevealPolicy
+  history: RoundResult[]
+}
+
+/** Summarise the just-revealed round into a log entry, or null if nothing was
+ *  voted (an empty round isn't worth logging). */
+function summariseRound(meta: RoomMeta, members: Map<string, Member>): RoundResult | null {
+  const participants = [...members.values()].map((m) => ({
+    id: m.id,
+    name: m.name,
+    isObserver: m.isObserver,
+    hasVoted: m.vote != null,
+    vote: m.vote,
+  }))
+  const stats = computeStats(meta.deckId, participants)
+  if (stats.count === 0) return null
+  const result = stats.consensus
+    ? (stats.histogram[0]?.label ?? '–')
+    : stats.median != null
+      ? fmt(stats.median)
+      : '–'
+  return {
+    round: meta.round,
+    topic: meta.topic.trim(),
+    deck: getDeck(meta.deckId).name,
+    count: stats.count,
+    average: stats.average,
+    median: stats.median,
+    low: stats.low,
+    high: stats.high,
+    consensus: stats.consensus,
+    result,
+  }
 }
 
 const makeMember = (
@@ -104,7 +141,7 @@ const clearVotes = (members: Map<string, Member>) => {
 
 /** Settings the host persists so a reload resumes the room. Votes and the
  *  participant list are deliberately excluded — they rebuild on reconnect. */
-type RoomSnapshot = Pick<RoomMeta, 'topic' | 'deckId' | 'round' | 'revealPolicy'>
+type RoomSnapshot = Pick<RoomMeta, 'topic' | 'deckId' | 'round' | 'revealPolicy' | 'history'>
 const snapshotKey = (roomId: string) => `pin:room:${roomId}`
 
 function loadSnapshot(roomId: string): RoomSnapshot | null {
@@ -142,6 +179,7 @@ export function usePeerRoom(config: RoomConfig): RoomApi {
     revealed: false,
     round: 1,
     revealPolicy: 'anyone',
+    history: [],
   })
 
   // Reset the local vote highlight whenever a new round starts. Guarded so we
@@ -184,6 +222,7 @@ export function usePeerRoom(config: RoomConfig): RoomApi {
       round: m.round,
       revealPolicy: m.revealPolicy,
       participants,
+      history: m.history,
     }
   }, [roomId])
 
@@ -194,6 +233,7 @@ export function usePeerRoom(config: RoomConfig): RoomApi {
       deckId: m.deckId,
       round: m.round,
       revealPolicy: m.revealPolicy,
+      history: m.history,
     }
     try {
       sessionStorage.setItem(snapshotKey(roomId), JSON.stringify(snap))
@@ -236,8 +276,13 @@ export function usePeerRoom(config: RoomConfig): RoomApi {
       const members = membersRef.current
       const meta = metaRef.current
       const mem = members.get(fromId)
-      // When the policy is "host", only the host may run the round.
-      const mayFacilitate = meta.revealPolicy === 'anyone' || fromId === meta.hostId
+      // Whether this sender may run the round under the current reveal policy.
+      const mayRun =
+        !!mem &&
+        mayFacilitate(meta.revealPolicy, {
+          isHost: fromId === meta.hostId,
+          isObserver: mem.isObserver,
+        })
 
       switch (msg.type) {
         case 'hello': {
@@ -253,11 +298,16 @@ export function usePeerRoom(config: RoomConfig): RoomApi {
           break
         }
         case 'reveal': {
-          if (mayFacilitate) meta.revealed = true
+          if (mayRun) meta.revealed = true
           break
         }
         case 'reset': {
-          if (mayFacilitate) {
+          if (mayRun) {
+            // Log the round we're closing (only if it was revealed with votes).
+            if (meta.revealed) {
+              const entry = summariseRound(meta, members)
+              if (entry) meta.history = [...meta.history, entry].slice(-100)
+            }
             meta.revealed = false
             meta.round += 1
             clearVotes(members)
@@ -265,7 +315,7 @@ export function usePeerRoom(config: RoomConfig): RoomApi {
           break
         }
         case 'setDeck': {
-          if (mayFacilitate) {
+          if (mayRun) {
             meta.deckId = msg.deckId
             // Switching decks invalidates in-flight votes.
             meta.revealed = false
@@ -406,7 +456,14 @@ export function usePeerRoom(config: RoomConfig): RoomApi {
             meta.deckId = snap.deckId
             meta.round = snap.round
             meta.revealPolicy = snap.revealPolicy
+            meta.history = snap.history ?? []
             meta.revealed = false
+          } else {
+            // Fresh host: seed from any settings carried in the room link.
+            const url = parseRoomSettings(window.location.hash)
+            if (url.deckId) meta.deckId = url.deckId
+            if (url.revealPolicy) meta.revealPolicy = url.revealPolicy
+            if (url.topic) meta.topic = url.topic
           }
           lastRoundRef.current = meta.round
           membersRef.current.set(id, makeMember(id, me.name, me.isObserver, null))
