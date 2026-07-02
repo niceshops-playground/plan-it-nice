@@ -55,6 +55,7 @@ export interface RoomConfig {
   isHost: boolean
   name: string
   isObserver: boolean
+  isModerator: boolean
 }
 
 export interface RoomApi {
@@ -74,6 +75,7 @@ export interface RoomApi {
   setDeck: (deckId: DeckId) => void
   setTopic: (topic: string) => void
   setObserver: (isObserver: boolean) => void
+  setModerator: (isModerator: boolean) => void
   setRevealPolicy: (policy: RevealPolicy) => void
   rename: (name: string) => void
   throwEmoji: (to: string, emoji: string) => void
@@ -83,6 +85,7 @@ interface Member {
   id: string
   name: string
   isObserver: boolean
+  isModerator: boolean
   vote: string | null
   conn: DataConnection | null
 }
@@ -104,6 +107,7 @@ function summariseRound(meta: RoomMeta, members: Map<string, Member>): RoundResu
     id: m.id,
     name: m.name,
     isObserver: m.isObserver,
+    isModerator: m.isModerator,
     hasVoted: m.vote != null,
     vote: m.vote,
   }))
@@ -132,8 +136,9 @@ const makeMember = (
   id: string,
   name: string,
   isObserver: boolean,
+  isModerator: boolean,
   conn: DataConnection | null,
-): Member => ({ id, name: name.trim() || 'Guest', isObserver, vote: null, conn })
+): Member => ({ id, name: name.trim() || 'Guest', isObserver, isModerator, vote: null, conn })
 
 const clearVotes = (members: Map<string, Member>) => {
   for (const m of members.values()) m.vote = null
@@ -210,6 +215,7 @@ export function usePeerRoom(config: RoomConfig): RoomApi {
       id: mem.id,
       name: mem.name,
       isObserver: mem.isObserver,
+      isModerator: mem.isModerator,
       hasVoted: mem.vote != null,
       vote: m.revealed ? mem.vote : null,
     }))
@@ -281,12 +287,15 @@ export function usePeerRoom(config: RoomConfig): RoomApi {
         !!mem &&
         mayFacilitate(meta.revealPolicy, {
           isHost: fromId === meta.hostId,
-          isObserver: mem.isObserver,
+          isModerator: mem.isModerator,
         })
 
       switch (msg.type) {
         case 'hello': {
-          members.set(fromId, makeMember(fromId, msg.name, !!msg.isObserver, mem?.conn ?? null))
+          members.set(
+            fromId,
+            makeMember(fromId, msg.name, !!msg.isObserver, !!msg.isModerator, mem?.conn ?? null),
+          )
           break
         }
         case 'vote': {
@@ -332,6 +341,10 @@ export function usePeerRoom(config: RoomConfig): RoomApi {
             mem.isObserver = msg.isObserver
             if (msg.isObserver) mem.vote = null
           }
+          break
+        }
+        case 'setModerator': {
+          if (mem) mem.isModerator = msg.isModerator
           break
         }
         case 'rename': {
@@ -389,7 +402,7 @@ export function usePeerRoom(config: RoomConfig): RoomApi {
       conn.on('open', () => {
         const existing = membersRef.current.get(conn.peer)
         if (existing) existing.conn = conn
-        else membersRef.current.set(conn.peer, makeMember(conn.peer, 'Guest', false, conn))
+        else membersRef.current.set(conn.peer, makeMember(conn.peer, 'Guest', false, false, conn))
         commit()
       })
       const drop = () => {
@@ -410,7 +423,12 @@ export function usePeerRoom(config: RoomConfig): RoomApi {
         reconnectAttempts = 0
         setStatus('connected')
         setError(null)
-        conn.send({ type: 'hello', name: me.name, isObserver: me.isObserver } satisfies ClientMessage)
+        conn.send({
+          type: 'hello',
+          name: me.name,
+          isObserver: me.isObserver,
+          isModerator: me.isModerator,
+        } satisfies ClientMessage)
       })
       conn.on('data', (data) => {
         const msg = data as PeerMessage
@@ -466,7 +484,7 @@ export function usePeerRoom(config: RoomConfig): RoomApi {
             if (url.topic) meta.topic = url.topic
           }
           lastRoundRef.current = meta.round
-          membersRef.current.set(id, makeMember(id, me.name, me.isObserver, null))
+          membersRef.current.set(id, makeMember(id, me.name, me.isObserver, me.isModerator, null))
           setStatus('connected')
           commit()
         } else {
@@ -579,6 +597,10 @@ export function usePeerRoom(config: RoomConfig): RoomApi {
     },
     [send],
   )
+  const setModerator = useCallback(
+    (isModerator: boolean) => send({ type: 'setModerator', isModerator }),
+    [send],
+  )
   const throwEmoji = useCallback(
     (to: string, emoji: string) => send({ type: 'throw', to, emoji }),
     [send],
@@ -599,6 +621,7 @@ export function usePeerRoom(config: RoomConfig): RoomApi {
     setDeck,
     setTopic,
     setObserver,
+    setModerator,
     setRevealPolicy,
     rename,
     throwEmoji,

@@ -443,6 +443,16 @@ select:focus {
   color: var(--orange-bright);
   border: 1px solid var(--orange-dim);
 }
+.mod-badge {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  font-weight: 700;
+  background: var(--orange-dim);
+  color: #fff;
+}
 .vote-chip {
   min-width: 2rem;
   text-align: center;

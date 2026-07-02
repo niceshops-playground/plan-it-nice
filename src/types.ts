@@ -19,14 +19,17 @@ export type DeckId = 'fibonacci' | 'mod-fibonacci' | 'tshirt' | 'powers-of-2'
 
 /** Who is allowed to reveal cards, start a new round, and change the deck.
  *  `anyone` = any participant; `host` = only the room creator;
- *  `observers` = only participants in observer mode (the facilitators). */
-export type RevealPolicy = 'anyone' | 'host' | 'observers'
+ *  `moderators` = only participants flagged as moderators. */
+export type RevealPolicy = 'anyone' | 'host' | 'moderators'
 
 /** A participant as seen by everyone in the room. */
 export interface Participant {
   id: string
   name: string
   isObserver: boolean
+  /** Whether this participant may facilitate (reveal / new round / deck).
+   *  Independent of isObserver — a moderator may still vote. */
+  isModerator: boolean
   /** Whether this participant has cast a vote this round. */
   hasVoted: boolean
   /** The chosen card value — only populated for self, or for everyone once
@@ -83,7 +86,7 @@ export interface Reaction {
  * ------------------------------------------------------------------ */
 
 export type ClientMessage =
-  | { type: 'hello'; name: string; isObserver: boolean }
+  | { type: 'hello'; name: string; isObserver: boolean; isModerator: boolean }
   | { type: 'vote'; value: string }
   | { type: 'retract' }
   | { type: 'reveal' }
@@ -91,6 +94,7 @@ export type ClientMessage =
   | { type: 'setDeck'; deckId: DeckId }
   | { type: 'setTopic'; topic: string }
   | { type: 'setObserver'; isObserver: boolean }
+  | { type: 'setModerator'; isModerator: boolean }
   | { type: 'rename'; name: string }
   | { type: 'setRevealPolicy'; policy: RevealPolicy }
   // A client asks the host to broadcast an emoji aimed at `to`.

@@ -89,14 +89,15 @@ export default function Room({ config, onLeave }: Props) {
   const votedCount = voters.filter((p) => p.hasVoted).length
   const allVoted = voters.length > 0 && votedCount === voters.length
   const amObserver = self?.isObserver ?? config.isObserver
+  const amModerator = self?.isModerator ?? config.isModerator
   // Who may reveal / reset / change the deck — same rule the host enforces.
   const canFacilitate = mayFacilitate(state.revealPolicy, {
     isHost: room.isHost,
-    isObserver: amObserver,
+    isModerator: amModerator,
   })
   const facilitateHint =
-    state.revealPolicy === 'observers'
-      ? 'Only observers can run the round in this room'
+    state.revealPolicy === 'moderators'
+      ? 'Only moderators can run the round in this room'
       : 'Only the host can run the round in this room'
 
   return (
@@ -163,7 +164,7 @@ export default function Room({ config, onLeave }: Props) {
               >
                 <option value="anyone">Anyone</option>
                 <option value="host">Host only</option>
-                <option value="observers">Observers only</option>
+                <option value="moderators">Moderators only</option>
               </select>
             </label>
           )}
@@ -229,8 +230,9 @@ export default function Room({ config, onLeave }: Props) {
         ) : amObserver ? (
           <section className="observer-note card-panel">
             <p className="muted">
-              You’re observing. {canFacilitate ? 'Reveal the votes' : 'The host reveals the votes'}{' '}
-              when the team is ready.
+              You’re observing.{' '}
+              {canFacilitate ? 'Reveal the votes' : 'The facilitator reveals the votes'} when the
+              team is ready.
             </p>
           </section>
         ) : (
@@ -253,6 +255,14 @@ export default function Room({ config, onLeave }: Props) {
             onChange={(e) => room.setObserver(e.target.checked)}
           />
           <span>Observer mode</span>
+        </label>
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={amModerator}
+            onChange={(e) => room.setModerator(e.target.checked)}
+          />
+          <span>Moderator</span>
         </label>
         {room.isHost && <span className="host-badge">host</span>}
       </footer>

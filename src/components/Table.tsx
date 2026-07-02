@@ -168,6 +168,7 @@ function Seat({
       <div className="seat-name">
         <span className="seat-name-text">{p.name}</span>
         {isHost && <span className="host-badge">host</span>}
+        {p.isModerator && <span className="mod-badge">mod</span>}
         {isSelf && <span className="you-tag">you</span>}
       </div>
 
@@ -193,6 +194,7 @@ function ObserverChip({
       </span>
       <span className="seat-name-text">{p.name}</span>
       {isHost && <span className="host-badge">host</span>}
+      {p.isModerator && <span className="mod-badge">mod</span>}
       {isSelf && <span className="you-tag">you</span>}
       <FloatingReactions reactions={reactions} />
       <div className="react">

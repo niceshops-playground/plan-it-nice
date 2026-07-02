@@ -10,7 +10,7 @@ export interface RoomSettings {
 }
 
 const isDeckId = (v: string | null): v is DeckId => v != null && v in DECKS
-const REVEAL_POLICIES: RevealPolicy[] = ['anyone', 'host', 'observers']
+const REVEAL_POLICIES: RevealPolicy[] = ['anyone', 'host', 'moderators']
 const isRevealPolicy = (v: string | null): v is RevealPolicy =>
   v != null && (REVEAL_POLICIES as string[]).includes(v)
 
