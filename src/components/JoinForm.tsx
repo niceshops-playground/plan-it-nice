@@ -6,7 +6,8 @@ interface Props {
   isHost: boolean
   defaultName: string
   defaultObserver?: boolean
-  onEnter: (name: string, isObserver: boolean) => void
+  defaultModerator?: boolean
+  onEnter: (name: string, isObserver: boolean, isModerator: boolean) => void
   onCancel: () => void
 }
 
@@ -15,11 +16,14 @@ export default function JoinForm({
   isHost,
   defaultName,
   defaultObserver = false,
+  defaultModerator = false,
   onEnter,
   onCancel,
 }: Props) {
   const [name, setName] = useState(defaultName)
   const [isObserver, setIsObserver] = useState(defaultObserver)
+  // The room creator facilitates by default.
+  const [isModerator, setIsModerator] = useState(defaultModerator || isHost)
   const trimmed = name.trim()
 
   return (
@@ -38,7 +42,7 @@ export default function JoinForm({
         <form
           onSubmit={(e) => {
             e.preventDefault()
-            if (trimmed) onEnter(trimmed, isObserver)
+            if (trimmed) onEnter(trimmed, isObserver, isModerator)
           }}
         >
           <label className="field">
@@ -61,7 +65,19 @@ export default function JoinForm({
             />
             <span>
               Join as observer
-              <small className="muted"> — watch and facilitate without voting</small>
+              <small className="muted"> — watch without voting</small>
+            </span>
+          </label>
+
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={isModerator}
+              onChange={(e) => setIsModerator(e.target.checked)}
+            />
+            <span>
+              Moderator
+              <small className="muted"> — may reveal, start rounds and change the deck</small>
             </span>
           </label>
 

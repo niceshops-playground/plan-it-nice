@@ -21,6 +21,7 @@ interface Session {
   isHost: boolean
   name: string
   isObserver: boolean
+  isModerator: boolean
 }
 
 function readRoomFromHash(): string | null {
@@ -30,6 +31,7 @@ function readRoomFromHash(): string | null {
 
 const NAME_KEY = 'pin:name'
 const OBSERVER_KEY = 'pin:observer'
+const MODERATOR_KEY = 'pin:moderator'
 const SESSION_KEY = 'pin:session'
 
 function loadSession(): Session | null {
@@ -73,11 +75,12 @@ export default function App() {
     window.location.hash = `#/room/${code}`
   }
 
-  const handleEnter = (name: string, isObserver: boolean) => {
+  const handleEnter = (name: string, isObserver: boolean, isModerator: boolean) => {
     if (!roomCode) return
     localStorage.setItem(NAME_KEY, name)
     localStorage.setItem(OBSERVER_KEY, String(isObserver))
-    const next: Session = { roomId: roomCode, isHost: pendingHost, name, isObserver }
+    localStorage.setItem(MODERATOR_KEY, String(isModerator))
+    const next: Session = { roomId: roomCode, isHost: pendingHost, name, isObserver, isModerator }
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(next))
     setSession(next)
   }
@@ -100,6 +103,7 @@ export default function App() {
         isHost={pendingHost}
         defaultName={localStorage.getItem(NAME_KEY) ?? ''}
         defaultObserver={localStorage.getItem(OBSERVER_KEY) === 'true'}
+        defaultModerator={localStorage.getItem(MODERATOR_KEY) === 'true'}
         onEnter={handleEnter}
         onCancel={handleLeave}
       />

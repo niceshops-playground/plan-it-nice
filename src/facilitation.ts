@@ -6,14 +6,14 @@ import type { RevealPolicy } from './types'
  *  import this single source of truth and can never disagree. */
 export function mayFacilitate(
   policy: RevealPolicy,
-  who: { isHost: boolean; isObserver: boolean },
+  who: { isHost: boolean; isModerator: boolean },
 ): boolean {
   switch (policy) {
     case 'anyone':
       return true
     case 'host':
       return who.isHost
-    case 'observers':
-      return who.isObserver
+    case 'moderators':
+      return who.isModerator
   }
 }

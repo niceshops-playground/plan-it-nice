@@ -422,7 +422,8 @@ select:focus {
 }
 .you-tag,
 .observer-tag,
-.host-badge {
+.host-badge,
+.mod-badge {
   font-size: 0.65rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -442,6 +443,10 @@ select:focus {
   background: var(--ink-3);
   color: var(--orange-bright);
   border: 1px solid var(--orange-dim);
+}
+.mod-badge {
+  background: var(--orange-dim);
+  color: #fff;
 }
 .vote-chip {
   min-width: 2rem;
