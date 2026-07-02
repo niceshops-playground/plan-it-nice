@@ -1,5 +1,5 @@
-// Crockford-ish alphabet: no 0/O/1/I/L to keep codes easy to read aloud.
-const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+// Lowercase, no 0/o/1/i/l so a random code is easy to read aloud.
+const ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789'
 
 /** Generate a random, human-friendly room code (default 6 chars). */
 export function makeRoomCode(length = 6): string {
@@ -10,11 +10,23 @@ export function makeRoomCode(length = 6): string {
   return code
 }
 
-/** Normalise user-typed codes: uppercase, strip anything not in the alphabet. */
-// The alphabet is alphanumeric, so it's safe to drop straight into a character
-// class without escaping.
-const NOT_IN_ALPHABET = new RegExp(`[^${ALPHABET}]`, 'g')
+/** Longest a room code (random or a custom team name) may be. */
+export const MAX_ROOM_CODE_LENGTH = 40
+/** Shortest usable code — also the "Join" button's enable threshold. */
+export const MIN_ROOM_CODE_LENGTH = 3
 
+/**
+ * Canonicalise any input into a room code / peer-id-safe slug: lowercase, runs
+ * of anything but a-z0-9 collapsed to a single hyphen, edge hyphens trimmed.
+ * This lets a team type a memorable name ("Frontend Guild" → "frontend-guild")
+ * and still land in the same room as anyone else who types the same thing.
+ * The result feeds the PeerJS id `pin<code>`, which permits `-` between
+ * alphanumerics — the trimming/collapsing keeps it valid.
+ */
 export function normalizeRoomCode(input: string): string {
-  return input.toUpperCase().replace(NOT_IN_ALPHABET, '')
+  return input
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, MAX_ROOM_CODE_LENGTH)
 }

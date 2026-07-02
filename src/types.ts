@@ -18,8 +18,9 @@ export interface Deck {
 export type DeckId = 'fibonacci' | 'mod-fibonacci' | 'tshirt' | 'powers-of-2'
 
 /** Who is allowed to reveal cards, start a new round, and change the deck.
- *  `anyone` = any participant; `host` = only the room creator. */
-export type RevealPolicy = 'anyone' | 'host'
+ *  `anyone` = any participant; `host` = only the room creator;
+ *  `observers` = only participants in observer mode (the facilitators). */
+export type RevealPolicy = 'anyone' | 'host' | 'observers'
 
 /** A participant as seen by everyone in the room. */
 export interface Participant {
@@ -31,6 +32,24 @@ export interface Participant {
   /** The chosen card value — only populated for self, or for everyone once
    *  the round is revealed. `null` otherwise (votes stay hidden). */
   vote: string | null
+}
+
+/** A finished round, appended to the session log when a new round starts.
+ *  Computed once on the host so every peer shows the same numbers. */
+export interface RoundResult {
+  round: number
+  topic: string
+  /** Deck display name at the time the round was estimated. */
+  deck: string
+  /** Number of votes cast. */
+  count: number
+  average: number | null
+  median: number | null
+  low: string | null
+  high: string | null
+  consensus: boolean
+  /** Headline value for the row — the agreed card, or the median. */
+  result: string
 }
 
 /** Authoritative room state, owned by the host and broadcast to all peers. */
@@ -45,6 +64,8 @@ export interface RoomState {
   round: number
   revealPolicy: RevealPolicy
   participants: Participant[]
+  /** Completed rounds this session, oldest first. */
+  history: RoundResult[]
 }
 
 /** A transient emoji thrown from one participant at another. Not part of the

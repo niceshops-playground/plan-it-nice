@@ -1,11 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { usePeerRoom, type RoomConfig } from '../peer/usePeerRoom'
 import { DECK_LIST, getDeck } from '../decks'
 import { computeStats } from '../stats'
+import { mayFacilitate } from '../facilitation'
+import { buildRoomHash } from '../room-url'
 import type { DeckId, RevealPolicy } from '../types'
 import CardGrid from './CardGrid'
 import Table from './Table'
 import Results from './Results'
+import SessionLog from './SessionLog'
 import Logo from './Logo'
 
 interface Props {
@@ -27,8 +30,26 @@ export default function Room({ config, onLeave }: Props) {
     [state],
   )
 
+  // The room hash carries deck / reveal-policy / topic so the Share link (and a
+  // reload) reproduce the setup.
+  const shareHash = state
+    ? buildRoomHash(config.roomId, {
+        deckId: state.deckId,
+        revealPolicy: state.revealPolicy,
+        topic: state.topic,
+      })
+    : `#/room/${config.roomId}`
+
+  // Mirror it into the URL. replaceState doesn't fire hashchange, so this never
+  // disturbs the active session.
+  useEffect(() => {
+    if (state && window.location.hash !== shareHash) {
+      window.history.replaceState(null, '', shareHash)
+    }
+  }, [state, shareHash])
+
   const [copied, setCopied] = useState(false)
-  const shareUrl = `${location.origin}${location.pathname}#/room/${config.roomId}`
+  const shareUrl = `${location.origin}${location.pathname}${shareHash}`
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl)
@@ -68,8 +89,15 @@ export default function Room({ config, onLeave }: Props) {
   const votedCount = voters.filter((p) => p.hasVoted).length
   const allVoted = voters.length > 0 && votedCount === voters.length
   const amObserver = self?.isObserver ?? config.isObserver
-  // Who may reveal / reset / change the deck.
-  const canFacilitate = room.isHost || state.revealPolicy === 'anyone'
+  // Who may reveal / reset / change the deck — same rule the host enforces.
+  const canFacilitate = mayFacilitate(state.revealPolicy, {
+    isHost: room.isHost,
+    isObserver: amObserver,
+  })
+  const facilitateHint =
+    state.revealPolicy === 'observers'
+      ? 'Only observers can run the round in this room'
+      : 'Only the host can run the round in this room'
 
   return (
     <div className="room">
@@ -135,6 +163,7 @@ export default function Room({ config, onLeave }: Props) {
               >
                 <option value="anyone">Anyone</option>
                 <option value="host">Host only</option>
+                <option value="observers">Observers only</option>
               </select>
             </label>
           )}
@@ -143,9 +172,14 @@ export default function Room({ config, onLeave }: Props) {
             {state.revealed ? (
               <span>Revealed</span>
             ) : (
-              <span>
-                {votedCount}/{voters.length} voted
-              </span>
+              <>
+                <span>
+                  {votedCount}/{voters.length} voted
+                </span>
+                {votedCount > 0 && !allVoted && (
+                  <span className="vote-warning">⚠ {voters.length - votedCount} still deciding</span>
+                )}
+              </>
             )}
           </div>
 
@@ -157,10 +191,12 @@ export default function Room({ config, onLeave }: Props) {
                 disabled={votedCount === 0 || !canFacilitate}
                 title={
                   !canFacilitate
-                    ? 'Only the host can reveal in this room'
+                    ? facilitateHint
                     : votedCount === 0
                       ? 'No votes yet'
-                      : 'Reveal all votes'
+                      : allVoted
+                        ? 'Reveal all votes'
+                        : `Reveal now — ${voters.length - votedCount} haven't voted yet`
                 }
               >
                 Reveal {allVoted ? '' : `(${votedCount})`}
@@ -170,7 +206,7 @@ export default function Room({ config, onLeave }: Props) {
                 className="btn btn-primary"
                 onClick={room.reset}
                 disabled={!canFacilitate}
-                title={!canFacilitate ? 'Only the host can start a new round' : 'Start a new round'}
+                title={!canFacilitate ? facilitateHint : 'Start a new round'}
               >
                 New round
               </button>
@@ -205,6 +241,8 @@ export default function Room({ config, onLeave }: Props) {
             onPick={(value) => (selfVote === value ? room.retract() : room.vote(value))}
           />
         )}
+
+        <SessionLog history={state.history} />
       </main>
 
       <footer className="room-footer">
